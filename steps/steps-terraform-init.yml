@@ -1,0 +1,49 @@
+parameters:
+  TerraformVariables:
+  name:
+  workingDirectory:
+  azureSubscription:
+
+steps:
+
+- task: AzureCLI@1
+  displayName: Get Azure Credentials
+  inputs:
+    azureSubscription: ${{ parameters.azureSubscription }}
+    addSpnToEnvironment: true
+    scriptLocation: inlineScript
+    inlineScript: |
+      set -eu
+
+      subscriptionId=$(az account show --query id -o tsv)
+      echo "##vso[task.setvariable variable=ARM_CLIENT_ID]$servicePrincipalId"
+      echo "##vso[task.setvariable variable=ARM_CLIENT_SECRET;isSecret=true]$servicePrincipalKey"
+      echo "##vso[task.setvariable variable=ARM_SUBSCRIPTION_ID]$subscriptionId"
+      echo "##vso[task.setvariable variable=ARM_TENANT_ID]$tenantId"
+
+- bash: |
+    set -eu
+    echo "##[group] Terraform Init"
+
+    az login --service-principal -u '$(ARM_CLIENT_ID)' --password '$(ARM_CLIENT_SECRET)' --tenant '$(ARM_TENANT_ID)'
+
+    echo "##[section] Get storage account access key"
+    export ARM_ACCESS_KEY=$(az storage account keys list -n $TF_VAR_storage_account -g $TF_VAR_resource_group --query "[0].value" -o tsv)
+    echo "##vso[task.setvariable variable=ARM_ACCESS_KEY;isSecret=true]$ARM_ACCESS_KEY"
+
+    echo "##[section] Terraform Version: $(terraform version)"
+    terraform init \
+      -input=false \
+      -upgrade \
+      -backend=true \
+      -backend-config="key=$TF_VAR_application/$TF_VAR_environment-$TF_VAR_region" \
+      -backend-config="storage_account_name=$TF_VAR_storage_account" \
+      -backend-config="container_name=$(Terraform.container)" \
+      -backend-config="access_key=$ARM_ACCESS_KEY"
+
+    echo "##[endgroup]"
+  displayName: Terraform Init
+  workingDirectory: ${{ parameters.workingDirectory }}
+  env:
+    ${{ parameters.TerraformVariables }}
+
