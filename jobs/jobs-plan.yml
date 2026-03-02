@@ -1,61 +1,60 @@
 parameters:
   environment:
-  envVariables: {}
   project:
   region:
   service_connection_arm:
+  terraform_container:  
+  component:
   type: 'plan'
   workingDirectory: 'terraform'
   debug: variables['System.Debug']
 
 jobs:
 
-- job: plan
+- deployment: plan
   displayName: Pipeline Plan
+  environment: ${{ parameters.environment }}-${{ parameters.project }}-${{ parameters.component }}
 
-  variables:
-  - group: ${{ parameters.environment }}-${{ parameters.project }}-variables
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - checkout: self
 
-  steps:
-  - checkout: self
+        - template: steps-terraform-init.yml
+          parameters:
+            azureSubscription: ${{ parameters.service_connection_arm }}
+            workingDirectory: ${{ parameters.workingDirectory }}
+            terraform_container: ${{ parameters.terraform_container }}
+            TerraformVariables: |
+              TF_VAR_environment=${{ parameters.environment }}
+              TF_VAR_region=${{ parameters.region }}
+              TF_VAR_project=${{ parameters.project }}
+              TF_VAR_component=${{ parameters.component }}
+              TF_VAR_storage_account=$(storage_account)
+              TF_VAR_resource_group=$(resource_group)
 
-  - template: steps-terraform-vars.yml
+        - bash: |
+            set -eu
 
-  - template: steps-terraform-init.yml
-    parameters:
-      TerraformVariables:
-        TF_VAR_environment: ${{ parameters.environment }}
-        TF_VAR_region: ${{ parameters.region }}
-        TF_VAR_application: ${{ lower(parameters.project) }}
-        TF_VAR_resource_group: $(TF_VAR_resource_group)
-        TF_VAR_storage_account: $(TF_VAR_storage_account)
-        TF_VAR_project: $(Build.Repository.Name)
-        TF_VAR_repository: $(Build.Repository.Uri)
-      name: ${{ parameters.environment }}-${{ lower(parameters.project) }}
-      workingDirectory: ${{ parameters.workingDirectory }}
-      azureSubscription: ${{ parameters.service_connection_arm }}
+            echo "##[group] Terraform ${{ parameters.type }}"
+            az login --service-principal -u '$(ARM_CLIENT_ID)' --password '$(ARM_CLIENT_SECRET)' --tenant '$(ARM_TENANT_ID)'
 
-  - bash: |
-      set -eu
+            export ARM_CLIENT_SECRET='$(ARM_CLIENT_SECRET)'
+            export ARM_ACCESS_KEY='$(ARM_ACCESS_KEY)'
 
-      echo "##[group] Terraform ${{ parameters.type }}"
-      az login --service-principal -u '$(ARM_CLIENT_ID)' --password '$(ARM_CLIENT_SECRET)' --tenant '$(ARM_TENANT_ID)'
+            echo "##[endgroup]"
 
-      export ARM_CLIENT_SECRET='$(ARM_CLIENT_SECRET)'
-      export ARM_ACCESS_KEY='$(ARM_ACCESS_KEY)'
-
-      echo "##[endgroup]"
-
-      terraform ${{ parameters.type }} \
-        -lock=true \
-        -input=false \
-        -refresh=true \
-        -var "location=${{ parameters.region }}" \
-        -var "project=$(Build.Repository.Name)" \
-        -var "repository=$(Build.Repository.Uri)" \
-        -var-file="$(Terraform.variables)"
-    displayName: Terraform Plan
-    workingDirectory: ${{ parameters.workingDirectory }}
-    env:
-      ${{ parameters.envVariables }}
+            terraform ${{ parameters.type }} \
+              -lock=true \
+              -input=false \
+              -refresh=true \
+              -var "region=${{ parameters.region }}" \
+              -var "project=${{ parameters.project }}" \
+              -var "environment=${{ parameters.environment }}" \
+              -var "component=${{ parameters.component }}"
+          displayName: Terraform Plan
+          workingDirectory: ${{ parameters.workingDirectory }}
+          env:
+            ${{ parameters.envVariables }}
 

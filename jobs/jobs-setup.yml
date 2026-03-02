@@ -3,6 +3,8 @@ parameters:
   project:
   region:
   service_connection_arm:
+  terraform_container:  
+  component:
   debug: variables['System.Debug']
 
 jobs:
@@ -10,19 +12,12 @@ jobs:
 - job: setup
   displayName: Pipeline Setup
 
-  variables:
-  - group: ${{ parameters.environment }}-${{ parameters.project }}-variables
-
   steps:
   - checkout: self
 
-  - template: steps-terraform-vars.yml
-
   - script: |
-      echo "$(System.TeamProjectId) / $(System.DefinitionId)"
-      echo "${{ parameters.environment }}-${{ parameters.project }}"
-      echo "${{ parameters.service_connection_arm }} / ${{ parameters.region }}"
-      echo "$(Terraform.container) / $(Pipeline.resource)"
+      echo "${{ parameters.project }}-${{ parameters.environment }}-${{ parameters.component }}"
+      echo "${{ parameters.service_connection_arm }} / ${{ parameters.region }} / ${{ parameters.terraform_container }}"
     displayName: Debug
     condition: eq(variables['System.Debug'], 'true')
 
@@ -35,19 +30,19 @@ jobs:
       inlineScript: |
         set -eu
 
-        echo "Verifying resource group $(TF_VAR_resource_group) exists"
-        if ! az group show --resource-group $(TF_VAR_resource_group) -o none; then
-          echo "ERROR: Resource group $(TF_VAR_resource_group) does not exist. Please create it first."
+        echo "Verifying resource group $(resource_group) exists"
+        if ! az group show --resource-group $(resource_group) -o none; then
+          echo "ERROR: Resource group $(resource_group) does not exist. Please create it first."
           exit 1
         fi
 
         echo "Setting up storage account for Terraform state"
-        if ! az storage account show -n $(TF_VAR_storage_account) -g $(TF_VAR_resource_group) -o none 2>/dev/null; then
-          echo "Creating storage account $(TF_VAR_storage_account) in ${{ parameters.region }}"
+        if ! az storage account show -n $(storage_account) -g $(resource_group) -o none 2>/dev/null; then
+          echo "Creating storage account $(storage_account) in ${{ parameters.region }}"
           az storage account create \
             --kind StorageV2 \
-            -n $(TF_VAR_storage_account) \
-            -g $(TF_VAR_resource_group) \
+            -n $(storage_account) \
+            -g $(resource_group) \
             -l ${{ parameters.region }} \
             --sku Standard_LRS \
             --min-tls-version TLS1_2 \
@@ -55,11 +50,11 @@ jobs:
             --allow-cross-tenant-replication false \
             -o none
 
-          echo "Creating storage container $(Terraform.container)"
-          ARM_ACCESS_KEY=$(az storage account keys list -n $(TF_VAR_storage_account) -g $(TF_VAR_resource_group) --query "[0].value" -o tsv)
+          echo "Creating storage container ${{ parameters.terraform_container }}"
+          ARM_ACCESS_KEY=$(az storage account keys list -n $(storage_account) -g $(resource_group) --query "[0].value" -o tsv)
           az storage container create \
-            -n $(Terraform.container) \
-            --account-name $(TF_VAR_storage_account) \
+            -n ${{ parameters.terraform_container }} \
+            --account-name $(storage_account) \
             --account-key $ARM_ACCESS_KEY \
             -o none
           
@@ -68,19 +63,19 @@ jobs:
             --enable-versioning=true \
             --enable-delete-retention=true \
             --delete-retention-days=30 \
-            -n $(TF_VAR_storage_account) \
-            -g $(TF_VAR_resource_group) \
+            -n $(storage_account) \
+            -g $(resource_group) \
             -o none
         else
-          echo "Storage account $(TF_VAR_storage_account) already exists"
+          echo "Storage account $(storage_account) already exists"
           
           # Verify container exists
-          ARM_ACCESS_KEY=$(az storage account keys list -n $(TF_VAR_storage_account) -g $(TF_VAR_resource_group) --query "[0].value" -o tsv)
-          if ! az storage container show -n $(Terraform.container) --account-name $(TF_VAR_storage_account) --account-key $ARM_ACCESS_KEY -o none 2>/dev/null; then
-            echo "Creating missing storage container $(Terraform.container)"
+          ARM_ACCESS_KEY=$(az storage account keys list -n $(storage_account) -g $(resource_group) --query "[0].value" -o tsv)
+          if ! az storage container show -n ${{ parameters.terraform_container }} --account-name $(storage_account) --account-key $ARM_ACCESS_KEY -o none 2>/dev/null; then
+            echo "Creating missing storage container ${{ parameters.terraform_container }}"
             az storage container create \
-              -n $(Terraform.container) \
-              --account-name $(TF_VAR_storage_account) \
+              -n ${{ parameters.terraform_container }} \
+              --account-name $(storage_account) \
               --account-key $ARM_ACCESS_KEY \
               -o none
           fi

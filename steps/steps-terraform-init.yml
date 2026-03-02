@@ -3,6 +3,7 @@ parameters:
   name:
   workingDirectory:
   azureSubscription:
+  terraform_container:
 
 steps:
 
@@ -36,9 +37,9 @@ steps:
       -input=false \
       -upgrade \
       -backend=true \
-      -backend-config="key=$TF_VAR_application/$TF_VAR_environment-$TF_VAR_region" \
-      -backend-config="storage_account_name=$TF_VAR_storage_account" \
-      -backend-config="container_name=$(Terraform.container)" \
+      -backend-config="key="$TF_VAR_environment-$TF_VAR_region-$TF_VAR_project-$TF_VAR_component" \
+      -backend-config="storage_account_name=$(storage_account)" \
+      -backend-config="container_name=${{ parameters.terraform_container }}" \
       -backend-config="access_key=$ARM_ACCESS_KEY"
 
     echo "##[endgroup]"
