@@ -60,7 +60,9 @@ jobs:
               -var "region=${{ parameters.region }}" \
               -var "project=${{ parameters.project }}" \
               -var "environment=${{ parameters.environment }}" \
-              -var "component=${{ parameters.component }}"
+              -var "component=${{ parameters.component }}" \
+              -var "location=$TF_VAR_location" \
+              -var "main_resource_group=$TF_VAR_main_resource_group"
           displayName: Terraform Apply
           workingDirectory: ${{ parameters.workingDirectory }}
 
