@@ -5,6 +5,7 @@ parameters:
   service_connection_arm:
   terraform_container:  
   component:
+  envVariables: {}
   type: 'apply'
   workingDirectory: 'terraform'
   debug: variables['System.Debug']
@@ -21,7 +22,7 @@ jobs:
         steps:
         - checkout: self
 
-        - template: steps-terraform-init.yml
+        - template: /steps/steps-terraform-init.yml@pipeline-templates
           parameters:
             azureSubscription: ${{ parameters.service_connection_arm }}
             workingDirectory: ${{ parameters.workingDirectory }}
