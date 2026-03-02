@@ -3,8 +3,9 @@ parameters:
   project:
   region:
   service_connection_arm:
-  terraform_container:  
+  terraform_container:
   component:
+  TerraformVariables:
   type: 'plan'
   workingDirectory: 'terraform'
   debug: variables['System.Debug']
@@ -40,6 +41,11 @@ jobs:
         - bash: |
             set -eu
 
+            # Export TerraformVariables
+            set -a
+            ${{ parameters.TerraformVariables }}
+            set +a
+
             echo "##[group] Terraform ${{ parameters.type }}"
             az login --service-principal -u '$(ARM_CLIENT_ID)' --password '$(ARM_CLIENT_SECRET)' --tenant '$(ARM_TENANT_ID)'
 
@@ -58,6 +64,4 @@ jobs:
               -var "component=${{ parameters.component }}"
           displayName: Terraform Plan
           workingDirectory: ${{ parameters.workingDirectory }}
-          env:
-            ${{ parameters.envVariables }}
 

@@ -25,7 +25,16 @@ steps:
 - bash: |
     set -eu
     
+    # Automatically export all variables from TerraformVariables
+    set -a
     ${{ parameters.TerraformVariables }}
+    set +a
+    
+    # Dynamically persist ALL TF_VAR_* variables as pipeline variables
+    # This way only the variables that are actually defined get persisted
+    env | grep '^TF_VAR_' | while IFS='=' read -r name value; do
+      echo "##vso[task.setvariable variable=$name]$value"
+    done
     
     echo "##[group] Terraform Init"
 
