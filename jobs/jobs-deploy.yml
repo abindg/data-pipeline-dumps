@@ -5,7 +5,6 @@ parameters:
   service_connection_arm:
   terraform_container:  
   component:
-  envVariables: {}
   type: 'apply'
   workingDirectory: 'terraform'
   debug: variables['System.Debug']

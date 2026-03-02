@@ -24,6 +24,9 @@ steps:
 
 - bash: |
     set -eu
+    
+    ${{ parameters.TerraformVariables }}
+    
     echo "##[group] Terraform Init"
 
     az login --service-principal -u '$(ARM_CLIENT_ID)' --password '$(ARM_CLIENT_SECRET)' --tenant '$(ARM_TENANT_ID)'
@@ -45,6 +48,4 @@ steps:
     echo "##[endgroup]"
   displayName: Terraform Init
   workingDirectory: ${{ parameters.workingDirectory }}
-  env:
-    ${{ parameters.TerraformVariables }}
 
