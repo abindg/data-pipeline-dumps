@@ -13,7 +13,7 @@ jobs:
   displayName: Pipeline Setup
 
   variables:
-  - group: ${{ parameters.environment }}-${{ parameters.project }}-variables
+  - group: ${{ parameters.project }}-${{ parameters.environment }}-variables
 
   steps:
   - checkout: self
