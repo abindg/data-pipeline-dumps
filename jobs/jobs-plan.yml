@@ -32,11 +32,11 @@ jobs:
             terraform_container: ${{ parameters.terraform_container }}
             TerraformVariables: |
               TF_VAR_environment=${{ parameters.environment }}
-              TF_VAR_region=${{ parameters.region }}
+              TF_VAR_location=${{ parameters.region }}
               TF_VAR_project=${{ parameters.project }}
               TF_VAR_component=${{ parameters.component }}
               TF_VAR_storage_account=$(storage_account)
-              TF_VAR_resource_group=$(resource_group)
+              TF_VAR_main_resource_group=$(resource_group)
 
         - bash: |
             set -eu
