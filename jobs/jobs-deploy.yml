@@ -16,6 +16,9 @@ jobs:
   displayName: Pipeline Deploy
   environment: ${{ parameters.environment }}-${{ parameters.project }}-${{ parameters.component }}
 
+  variables:
+  - group: ${{ parameters.environment }}-${{ parameters.project }}-variables
+
   strategy:
     runOnce:
       deploy:
