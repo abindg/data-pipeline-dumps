@@ -57,7 +57,6 @@ jobs:
             terraform ${{ parameters.type }} \
               -input=false \
               -auto-approve \
-              -var "region=${{ parameters.region }}" \
               -var "project=${{ parameters.project }}" \
               -var "environment=${{ parameters.environment }}" \
               -var "component=${{ parameters.component }}" \

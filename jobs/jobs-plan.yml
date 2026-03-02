@@ -58,7 +58,6 @@ jobs:
               -lock=true \
               -input=false \
               -refresh=true \
-              -var "region=${{ parameters.region }}" \
               -var "project=${{ parameters.project }}" \
               -var "environment=${{ parameters.environment }}" \
               -var "component=${{ parameters.component }}" \
