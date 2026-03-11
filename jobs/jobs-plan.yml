@@ -63,6 +63,9 @@ jobs:
               -var "component=${{ parameters.component }}" \
               -var "location=$TF_VAR_location" \
               -var "main_resource_group=$TF_VAR_resource_group" \
+              -var "client_id"=$(ARM_CLIENT_ID) \
+              -var "client_secret"=$(ARM_CLIENT_SECRET) \
+              -var "tenant_id"=$(ARM_TENANT_ID) \
               -var-file="env/$TF_VAR_environment.tfvars"
           displayName: Terraform Plan
           workingDirectory: ${{ parameters.workingDirectory }}
