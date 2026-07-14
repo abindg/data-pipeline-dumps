@@ -1,0 +1,57 @@
+parameters:
+  - name: azureSubscription
+    type: string
+  - name: prodWorkspaceId
+    type: string
+
+
+jobs:
+  - deployment: DeployToProd
+    displayName: 'fabric-cicd deploy'
+    environment: 'prod-data-warehouse-infrastructure'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - task: AzureCLI@2
+              displayName: 'Deploy to Prod workspace'
+              inputs:
+                azureSubscription: ${{ parameters.azureSubscription }}
+                scriptType: 'bash'
+                scriptLocation: 'inlineScript'
+                addSpnToEnvironment: true
+                inlineScript: |
+                  set -euo pipefail
+
+                  sudo apt-get update
+                  sudo apt-get install -y python3-venv python3-pip
+
+                  python3 -m venv .venv
+                  source .venv/bin/activate
+
+                  python -m pip install --upgrade pip
+                  pip install fabric-cicd azure-identity
+
+                  export ARM_TENANT_ID="$tenantId"
+                  export ARM_CLIENT_ID="$servicePrincipalId"
+                  export ARM_CLIENT_SECRET="$servicePrincipalKey"
+                  export PROD_WORKSPACE_ID="${{ parameters.prodWorkspaceId }}"
+
+                  echo "Getting Power BI token..."
+
+                  token=$(az account get-access-token \
+                      --resource https://analysis.windows.net/powerbi/api \
+                      --query accessToken -o tsv)
+
+                  echo "Listing workspaces visible to the service principal..."
+
+                  curl -s \
+                    -H "Authorization: Bearer $token" \
+                    https://api.powerbi.com/v1.0/myorg/groups | jq .
+
+                  python "$(Build.SourcesDirectory)/deploy.py"
+
+            - script: |
+                echo "Deployment finished. Build: $(Build.BuildNumber), Commit: $(Build.SourceVersion)"
+              displayName: 'Log deployment summary'
+              condition: always()
